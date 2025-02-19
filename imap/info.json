@@ -1,13 +1,14 @@
 {
   "name": "imap",
-  "version": "3.5.8",
+  "version": "3.5.9",
   "label": "IMAP",
   "description": "Steps related to fetching and parsing email",
   "publisher": "Fortinet",
+  "contributor": "Naili.M",
   "cs_approved": true,
   "cs_compatible": true,
   "category": "utilities",
-  "help_online": "https://docs.fortinet.com/document/fortisoar/3.5.8/imap-connector/969/imap-connector-v3-5-8",
+  "help_online": "https://docs.fortinet.com/document/fortisoar/3.5.9/imap-connector/969/imap-connector-v3.5.9",
   "icon_small_name": "imap_small.png",
   "icon_large_name": "imap_large.png",
   "ingestion_supported": true,
@@ -200,7 +201,17 @@
           "editable": true,
           "required": false,
           "value": true
-        }
+        },
+        {
+          "title": "Save raw email as attachment",
+          "tooltip": "Saves the raw RFC822 email as attachment",
+          "name": "save_raw_email",
+          "type": "checkbox",
+          "visible": true,
+          "editable": true,
+          "required": false,
+          "value": false
+        }        
       ],
       "output_schema": [
         {

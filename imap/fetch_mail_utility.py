@@ -6,6 +6,7 @@
 
 import email
 import json
+import random
 import ssl as ssl_lib
 from django.conf import settings
 from .errors.error_constants import *
@@ -13,6 +14,7 @@ from imapclient import IMAPClient
 from imapclient.exceptions import LoginError
 from connectors.core.connector import get_logger, ConnectorError
 from connectors.cyops_utilities.builtins import explode_email
+from integrations.crudhub import make_request
 
 logger = get_logger("builtins.imap")
 
@@ -25,6 +27,37 @@ except:
 
 # py 3.6 when
 DISPLAY_SIZE_LIMIT = 20000
+
+
+def upload_file_to_cyops(file_name, file_content, file_description):
+    try:
+        # Conditional import based on the FortiSOAR version.
+        try:
+            from integrations.crudhub import make_file_upload_request
+            response = make_file_upload_request(file_name, file_content, 'application/octet-stream')
+
+        except:
+            from cshmac.requests import HmacAuth
+            from integrations.crudhub import maybe_json_or_raise
+            from requests import post
+
+            url = settings.CRUD_HUB_URL + '/api/3/files'
+            auth = HmacAuth(url, 'POST', settings.APPLIANCE_PUBLIC_KEY,
+                            settings.APPLIANCE_PRIVATE_KEY,
+                            settings.APPLIANCE_PUBLIC_KEY.encode('utf-8'))
+            files = {'file': (file_name, file_content, {'Expire': 0})}
+            response = post(url, auth=auth, files=files, verify=False)
+            response = maybe_json_or_raise(response)
+
+        logger.info('File upload complete {0}'.format(str(response)))
+        file_id = response['@id']
+        attach_response = make_request('/api/3/attachments', 'POST',
+                                       {'name': file_name, 'file': file_id, 'description': file_description })
+        logger.info('attach file completed: {0}'.format(attach_response))
+        return attach_response
+    except Exception as err:
+        logger.exception('An exception occurred {0}'.format(str(err)))
+        raise ConnectorError('An exception occurred {0}'.format(str(err)))
 
 
 def _make_imap_client(host, port, username, password, ssl, verify):
@@ -100,6 +133,13 @@ def _fetch_email(client, source, destination, limit_count=30, optimize=False, pa
             email_data = _parse_email_old(client, data)
         # move the email to another folder
         _move_email(client, msgid, source, destination)
+        # upload raw email to cyops if needed
+        save_raw_email = kwargs.get('save_raw_email', False)
+        if save_raw_email:
+            email_id = email_data['headers'].get('message-id', 'email-'+str(random.randrange(10000, 99999)))
+            attachment = upload_file_to_cyops(email_id, raw_msg, f"RFC822 of email: {email_id}")
+            email_data['headers'].update({'rfc822_attachment':attachment})
+
         # build up list of emails
         email_data['total_unread_emails'] = unread_mails_count
         emails.append(email_data)

@@ -32,10 +32,11 @@ def fetch_email_new(config, params, *args, **kwargs):
     """
     limit_count = params.get('limit_count', 30)
     parse_inline_image = params.get('parse_inline_image', False)
+    save_raw_email = params.get('save_raw_email', False)    
     client = _make_imap_client(config.get('host'), config.get('port'),
                                config.get('username'), config.get('password'), config.get('ssl'), config.get('verify'))
 
-    fetched_mails = _fetch_email(client, config.get('source'), config.get('destination'), limit_count, optimize=True, new=True, parse_inline_image=parse_inline_image, **kwargs)
+    fetched_mails = _fetch_email(client, config.get('source'), config.get('destination'), limit_count, optimize=True, new=True, parse_inline_image=parse_inline_image, save_raw_email=save_raw_email, **kwargs)
     logout_client(client)
     return fetched_mails
 
